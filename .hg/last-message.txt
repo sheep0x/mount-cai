@@ -1,1 +1,1 @@
-added README.md and LICENSE
+reformatted README.md
