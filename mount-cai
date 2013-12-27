@@ -1,0 +1,191 @@
+#! /usr/bin/env bash
+
+# Copyright 2013 Chen Ruichao <linuxer.sheep.0x@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# TODO sudo-free version
+# TODO test remounting
+# TODO remove symlink when unmounting
+
+err() { cat >&2; exit 1; }
+
+# ==================== configuration ====================
+scriptname=${0##*/}
+#scriptname=mount-cai    # uncomment this line if you want
+
+davpath='oj.luogu.org:8888/cai'
+locpath=.
+unmount=false
+symlink=false
+
+user=$USER
+
+interactive=false
+tty &>/dev/null && interactive=true
+
+# ==================== help ====================
+usage="$scriptname [-hi] [-u UID|USERNAME] [--help|--interactive|--script|--non-interactive|--unmount|--symlink] [--user=UID|USERNAME] [DIRECTORY]"
+
+printHelp()
+{
+    echo "$usage"
+    cat
+} << EOF
+mount Cai on DIRECTORY via WebDAV (with no SSL support)
+by default, DIRECTORY is ./
+
+-h --help
+        print this message
+--unmount
+        unmount target directory, instead of mounting it
+--symlink
+        create a symlink named cai to reduce the time of entering frequently used directory
+        useful if you're using graphical file manager like Nautilus
+-u --user=USER
+        mount the remote filesystem as USER (USER should be either uid or username)
+-i --interactive
+        force the script to run in interactive mode
+--script --non-interactive
+        force the script to run in non-interactive mode
+EOF
+
+# ==================== parse argv ====================
+parseArgs()
+{
+    while (( $# > 0 )); do
+        case "$1" in
+            -u)
+                (( $# >= 2 )) || return 1
+                user=$2
+                shift
+                ;;
+            --user=*)
+                user=${1#*=}
+                ;;
+            --unmount)
+                unmount=true
+                ;;
+            --symlink)
+                symlink=true
+                ;;
+            -i|--interactive)
+                interactive=true
+                ;;
+            --script|--non-interactive)
+                interactive=false
+                ;;
+            -h|--help)
+                printHelp
+                exit 0
+                ;;
+            *)
+                if (( $# == 1 ))
+                    then locpath=$1
+                    else return 1
+                fi
+                ;;
+        esac
+        shift
+    done
+    return 0
+}
+
+parseArgs "$@" || err << EOF
+$scriptname: wrong arguments
+$usage
+EOF
+
+# ==================== gain privilege ====================
+[[ $(id -u) == 0 ]] || exec sudo -- "$0" -u "$user" "$@"
+
+# ==================== utils for interactive mode ====================
+[[ $interactive == true ]] && {
+    exec 3<&0
+    prompt() {
+        cat
+        while true; do
+            read -sn1 -u3 key
+            case "$key" in
+                y)
+                    return 0
+                    ;;
+                n)
+                    return 1
+                    ;;
+                *)
+                    echo 'please press either y or n'
+                    ;;
+            esac
+        done
+    }
+}
+
+# ==================== check dependencies ====================
+if [[ $unmount == true ]]; then
+    umount -l "$locpath" && exit 0
+    [[ $interactive == true ]] && err <<< "Ouch, I can't unmount the directory. Maybe you can ask a human for help ^ ^"
+    err <<< "$scriptname: failed to unmount directory"
+fi
+
+which mount.davfs > /dev/null || {
+    [[ $interactive == false ]] && err <<< "$scriptname: davfs2 required but not installed"
+    if
+        prompt << EOF
+davfs2 required but not installed
+Do you want to install it now? [y/n]
+(will run: apt-get install davfs2)
+EOF
+    then
+        apt-get install davfs2
+    else
+        echo bye
+        exit 0
+    fi
+}
+
+if [[ $interactive == true ]]; then
+    [[ -e $locpath ]] || {
+        if
+            prompt << EOF
+Target directory does not exist. Should I create it myself? [y/n]
+(will run: mkdir "$locpath")
+EOF
+        then
+            # you can use mkdir -p instead, but chown won't work correctly
+            mkdir "$locpath" || err <<< "Ouch, I can't create the target directory (did you make it read-only?)"
+            chown -- "$user" "$locpath"
+        else
+            echo bye
+            exit 0
+        fi
+    }
+    [[ -d $locpath ]] || err <<< "Ouch, \`$locpath' is not a directory"
+    mount.davfs -o "uid=$user" "$davpath" "$locpath" || err <<< "Ouch, I cannot mount the remote filesystem. Maybe you can ask a human for help ^ ^"
+else
+    [[ -e $locpath ]] || err <<< "$scriptname: \`$locpath' doesn't exist"
+    [[ -d $locpath ]] || err <<< "$scriptname: \`$locpath' is not a directory"
+    mount.davfs -o "uid=$user" "$davpath" "$locpath" || err <<< "$scriptname: failed to mount WebDAV filesystem"
+fi
+
+if [[ $symlink == true ]]; then
+    if
+        # XXX hope you won't mount Cai on / = =
+        ! ln -sT "$locpath/信息奥赛联考/2014省选培训资料" "$locpath/../cai" 2>/dev/null
+    then
+        [[ $interactive == true ]] && err <<< "Ouch, I can't create the symlink. (maybe it already exists?)"
+        err <<< "$scriptname: failed to create symlink"
+    fi
+fi
+
+exit 0
