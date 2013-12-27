@@ -1,1 +1,1 @@
-updated path of symlink; tested with bash -c
+added README.md and LICENSE
