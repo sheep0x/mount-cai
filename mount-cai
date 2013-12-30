@@ -32,7 +32,7 @@ symlink=false
 user=$USER
 
 interactive=false
-tty &>/dev/null && interactive=true
+[[ -t 0 && -t 1 ]] && interactive=true
 
 # ==================== help ====================
 usage="$scriptname [-hi] [-u UID|USERNAME] [--help|--interactive|--script|--non-interactive|--unmount|--symlink] [--user=UID|USERNAME] [DIRECTORY]"

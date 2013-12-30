@@ -24,12 +24,12 @@ License
 -------
 This script is licensed under Apache License, Version 2.0.
 
-Why the repo contains Mercurial files?
+This repo is a mirror
 --------------------------------------
-Sadly, the mercurial-git package (Wheezy) doesn't work so well for me, so I have to put up with different SCMs.
+Sadly, the mercurial-git package (Wheezy) doesn't work for me, so I have to put up with different SCMs.
 
-This repo is actually a Mercurial repo, and Git is only used as a tool to upload/download files to/from Github. That's why the Github repo also includes the .hg directory and the .hgignore file.
+This repo is actually a Mercurial repo, and Git is only used as a tool to upload/download files to/from Github. That's why the commit history doesn't make sense.
 
-Since the Git repo doesn't keep track of the actual commits, it is not supposed to be used as a collaborative tool. However, this script is so simple that patches works just fine.
+Since the Git repo doesn't keep track of the actual commits, it is not supposed to be used as a collaborative tool. However, this script is so simple that patches works just fine. Sorry for the inconvenience.
 
-If you know how to fix the mercurial-git bug or have any good suggestions about a better workaround, please tell me. And sorry again for the inconvenience.
+If you know how to fix the mercurial-git bug or have any good suggestions about a better workaround, please tell me.
