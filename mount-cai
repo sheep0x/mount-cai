@@ -17,6 +17,7 @@
 # TODO sudo-free version
 # TODO test remounting
 # TODO remove symlink when unmounting
+# XXX Don't source this file because CWD will be changed if --symlink is specified.
 
 err() { cat >&2; exit 1; }
 
@@ -52,6 +53,7 @@ by default, DIRECTORY is ./
 --symlink
         create a symlink named cai to reduce the time of entering frequently used directory
         useful if you're using graphical file manager like Nautilus
+        (could be slow)
 -u --user=USER
         mount the remote filesystem as USER (USER should be either uid or username)
 -i --interactive
@@ -179,9 +181,10 @@ else
 fi
 
 if [[ $symlink == true ]]; then
+    cd "$locpath"
     if
-        # XXX hope you won't mount Cai on / = =
-        ! ln -sT "$locpath/信息奥赛联考/2014省选培训资料" "$locpath/../cai" 2>/dev/null
+        # hope you won't mount Cai on / = =
+        ! ln -sT "${PWD##*/}/信息奥赛联考/2014省选培训资料" ../cai 2>/dev/null
     then
         [[ $interactive == true ]] && err <<< "Ouch, I can't create the symlink. (maybe it already exists?)"
         err <<< "$scriptname: failed to create symlink"
